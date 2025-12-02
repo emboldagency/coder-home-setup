@@ -20,6 +20,15 @@ seed_from_persistent() {
 	echo "Seeding user home from $src_root to $tgt_root"
 	mkdir -p "$tgt_root"
 
+	# If running as root, ensure the target directory is owned by the intended user
+	# before attempting rsync operations
+	if [ "$(id -u)" -eq 0 ]; then
+		target_user="$${SUDO_USER:-$(logname 2>/dev/null || echo embold)}"
+		# Force ownership of the target root to prevent permission denied errors
+		chown -R "$target_user:$target_user" "$tgt_root" 2>/dev/null || true
+		chmod -R u+rwX,g-rwx,o-rwx "$tgt_root" 2>/dev/null || true
+	fi
+
 	# Helper to rsync a source subdir into target (ignore existing files)
 	rsync_subdir() {
 		local s="$1" t="$2"
