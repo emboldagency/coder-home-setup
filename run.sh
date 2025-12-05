@@ -2,10 +2,11 @@
 set -euo pipefail
 
 # This script is rendered as a template by Terraform
-# SOURCE_DIR and TARGET_DIR are injected at render time
+# SOURCE_DIR, TARGET_DIR, and TARGET_USER are injected at render time
 # These use single '$' because we WANT Terraform to replace them
 SOURCE_DIR="${SOURCE_DIR}"
 TARGET_DIR="${TARGET_DIR}"
+TARGET_USER="${TARGET_USER}"
 
 # Seed user home from persistent /coder/home when needed.
 seed_from_persistent() {
@@ -20,31 +21,36 @@ seed_from_persistent() {
 	echo "Seeding user home from $src_root to $tgt_root"
 	mkdir -p "$tgt_root"
 
-	# If running as root, ensure the target directory is owned by the intended user
-	# before attempting rsync operations
+	# Ensure the target directory is owned by TARGET_USER
+	# Use sudo if not running as root
+	target_user="$${TARGET_USER:-embold}"
 	if [ "$(id -u)" -eq 0 ]; then
-		target_user="$${SUDO_USER:-$(logname 2>/dev/null || echo embold)}"
-		# Force ownership of the target root to prevent permission denied errors
+		# Running as root - chown directly
 		chown -R "$target_user:$target_user" "$tgt_root" 2>/dev/null || true
 		chmod -R u+rwX,g-rwx,o-rwx "$tgt_root" 2>/dev/null || true
+	else
+		# Running as user - use sudo for ownership changes
+		sudo chown -R "$target_user:$target_user" "$tgt_root" 2>/dev/null || true
+		sudo chmod -R u+rwX,g-rwx,o-rwx "$tgt_root" 2>/dev/null || true
 	fi
 
 	# Helper to rsync a source subdir into target (ignore existing files)
 	rsync_subdir() {
 		local s="$1" t="$2"
+		local target_user="$${TARGET_USER:-embold}"
 		if [ -d "$s" ]; then
 			mkdir -p "$t"
+			echo "Copying $s -> $t (owner: $target_user)"
+			# Always use --chown since we want explicit ownership
 			if [ "$(id -u)" -eq 0 ]; then
-				# If running as root, prefer to chown copied files to the target user
-				# FIX: Escape SUDO_USER with $$
-				target_user="$${SUDO_USER:-$(logname 2>/dev/null || echo embold)}"
-				echo "Copying $s -> $t (chown -> $target_user)"
+				# Running as root
 				rsync -aH --ignore-existing --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r --chown="$target_user:$target_user" "$s/" "$t/" || true
 			else
-				echo "Copying $s -> $t"
-				rsync -aH --ignore-existing "$s/" "$t/" || true
+				# Running as user - rsync without chown, then sudo chown
+				rsync -aH --ignore-existing --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r "$s/" "$t/" || true
+				sudo chown -R "$target_user:$target_user" "$t" 2>/dev/null || true
 			fi
-		fi
+			fi
 	}
 
 	rsync_subdir "$src_root/.local" "$tgt_root/.local"
@@ -53,10 +59,11 @@ seed_from_persistent() {
 	rsync_subdir "$src_root/.config/antidote" "$tgt_root/.config/antidote"
 
 	# Ensure ownership and basic perms are correct for target
+	target_user="$${TARGET_USER:-embold}"
 	if [ "$(id -u)" -eq 0 ]; then
-		# FIX: Escape SUDO_USER with $$
-		target_user="$${SUDO_USER:-$(logname 2>/dev/null || echo embold)}"
 		chown -R "$target_user:$target_user" "$tgt_root" || true
+	else
+		sudo chown -R "$target_user:$target_user" "$tgt_root" || true
 	fi
 }
 

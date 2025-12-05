@@ -14,3 +14,9 @@ variable "target_dir" {
   type        = string
   default     = ""
 }
+
+variable "target_user" {
+  description = "User to own the target directory (default: embold)"
+  type        = string
+  default     = "embold"
+}
