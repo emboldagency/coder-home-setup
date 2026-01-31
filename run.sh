@@ -38,11 +38,9 @@ seed_from_persistent() {
 	done
 
 	if [ "$${#sync_list[@]}" -gt 0 ]; then
-		echo "⏳ One-shot sync of $${#sync_list[@]} directories..."
-		local rsync_flags="-aH --ignore-existing --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r"
-		if [ "$(id -u)" -eq 0 ]; then
-			rsync_flags="$rsync_flags --chown=$target_user:$target_user"
-		fi
+	echo "⏳ Seeding $${#sync_list[@]} directories..."
+		local rsync_flags="-aH --ignore-existing --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r --chown=$target_user:$target_user"
+
 
 		$SUDO rsync $rsync_flags "$${sync_list[@]}" "$tgt_root/" || true
 	fi
