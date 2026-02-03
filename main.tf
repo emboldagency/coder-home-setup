@@ -8,13 +8,13 @@ terraform {
 
 resource "coder_script" "gem_setup" {
   agent_id           = var.agent_id
-  script             = templatefile("${path.module}/run.sh", {
+  display_name       = "Home Seeding and Gem Setup"
+  icon               = "https://api.embold.net/icons/?name=fas-house.svg&color=009dff"
+  run_on_start       = true
+  start_blocks_login = true
+  script = templatefile("${path.module}/run.sh", {
     SOURCE_DIR  = var.source_dir
     TARGET_DIR  = var.target_dir
     TARGET_USER = var.target_user
   })
-  display_name       = "Home Seeding and Gem Setup"
-  icon               = "/emojis/1f3e0.png"
-  run_on_start       = true
-  start_blocks_login = true
 }
