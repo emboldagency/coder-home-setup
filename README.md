@@ -1,5 +1,9 @@
 # coder-home-setup
 
+> [!CAUTION]
+> **DEPRECATION NOTICE:** This standalone repository is no longer maintained.
+> The **coder terraform module** has been migrated to: [**coder-registry**](https://github.com/emboldagency/coder-registry).
+
 Coder module that seeds files from `/coder/home` (the persistent coder area) into the user's home on workspace start. In addition, it will migrate legacy Ruby gems from `/coder/home` to the home directory.
 
 ## Inputs
